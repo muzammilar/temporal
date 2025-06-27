@@ -61,7 +61,8 @@ type (
 		throttledLogger     log.ThrottledLogger
 		matchingClient      matchingservice.MatchingServiceClient
 		metricsHandler      metrics.Handler // namespace/taskqueue tagged metric scope
-		cache               cache.Cache     // non-nil for root-partition
+		// TODO(stephanos): move cache out of partition manager
+		cache cache.Cache // non-nil for root-partition
 
 		// dynamicRate is the dynamic rate & burst for rate limiter
 		dynamicRateBurst quotas.MutableRateBurst
@@ -684,9 +685,17 @@ func (pm *taskQueuePartitionManagerImpl) Describe(
 				}
 			}
 			if !found {
-				// still add it as a v2 version because user explicitly asked for the stats, we'd
-				// make sure to load the TQ.
-				versions[PhysicalTaskQueueVersion{buildId: b}] = true
+				dv, _ := worker_versioning.WorkerDeploymentVersionFromStringV32(b)
+				if dv != nil {
+					// Add v3 version.
+					versions[PhysicalTaskQueueVersion{
+						buildId:              dv.BuildId,
+						deploymentSeriesName: dv.DeploymentName,
+					}] = true
+				} else {
+					// Still add v2 version because user explicitly asked for the stats, we'd make sure to load the TQ.
+					versions[PhysicalTaskQueueVersion{buildId: b}] = true
+				}
 			}
 		}
 	}
@@ -749,7 +758,7 @@ func (pm *taskQueuePartitionManagerImpl) LongPollExpirationInterval() time.Durat
 }
 
 func (pm *taskQueuePartitionManagerImpl) callerInfoContext(ctx context.Context) context.Context {
-	return headers.SetCallerInfo(ctx, headers.NewBackgroundCallerInfo(pm.ns.Name().String()))
+	return headers.SetCallerInfo(ctx, headers.NewBackgroundHighCallerInfo(pm.ns.Name().String()))
 }
 
 // ForceLoadAllNonRootPartitions spins off go routines which make RPC calls to all the

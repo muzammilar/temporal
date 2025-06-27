@@ -359,5 +359,8 @@ type (
 
 		DeleteSubStateMachine(path *persistencespb.StateMachinePath) error
 		IsSubStateMachineDeleted() bool
+
+		HasRequestID(requestID string) bool
+		SetSuccessorRunID(runID string)
 	}
 )

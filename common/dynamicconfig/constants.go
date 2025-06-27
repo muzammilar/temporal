@@ -223,17 +223,6 @@ response to a StartWorkflowExecution request and skipping the trip through match
 		5000,
 		`PersistenceHealthSignalBufferSize is the maximum number of persistence signals to buffer in memory per signal key`,
 	)
-	ShardRPSWarnLimit = NewGlobalIntSetting(
-		"system.shardRPSWarnLimit",
-		50,
-		`ShardRPSWarnLimit is the per-shard RPS limit for warning`,
-	)
-	ShardPerNsRPSWarnPercent = NewGlobalFloatSetting(
-		"system.shardPerNsRPSWarnPercent",
-		0.8,
-		`ShardPerNsRPSWarnPercent is the per-shard per-namespace RPS limit for warning as a percentage of ShardRPSWarnLimit
-these warning are not emitted if the value is set to 0 or less`,
-	)
 	OperatorRPSRatio = NewGlobalFloatSetting(
 		"system.operatorRPSRatio",
 		0.2,
@@ -960,11 +949,7 @@ Wildcards (*) are expanded to allow any substring. By default blacklist is empty
 		`FrontendEnableExecuteMultiOperation enables the ExecuteMultiOperation API in the frontend.
 The API is under active development.`,
 	)
-	EnableExecuteMultiOperationErrorDebug = NewNamespaceBoolSetting(
-		"history.enableExecuteMultiOperationErrorDebug",
-		false,
-		`Enable detailed MultiOperation error debug information in the history service.`,
-	)
+
 	FrontendEnableUpdateWorkflowExecutionAsyncAccepted = NewNamespaceBoolSetting(
 		"frontend.enableUpdateWorkflowExecutionAsyncAccepted",
 		true,
@@ -1256,7 +1241,7 @@ these log lines can be noisy, we want to be able to turn on and sample selective
 	)
 	TaskQueueInfoByBuildIdTTL = NewTaskQueueDurationSetting(
 		"matching.TaskQueueInfoByBuildIdTTL",
-		time.Second,
+		5*time.Second,
 		`TaskQueueInfoByBuildIdTTL serves as a TTL for the cache holding DescribeTaskQueue partition results`,
 	)
 	MatchingDropNonRetryableTasks = NewGlobalBoolSetting(
@@ -2040,6 +2025,16 @@ archivalQueueProcessor`,
 		0.9,
 		`WorkflowExecutionMaxTotalUpdatesSuggestContinueAsNewThreshold is the percentage threshold of total updates that any given workflow execution can receive before suggesting to continue-as-new.`,
 	)
+	EnableUpdateWithStartRetryOnClosedWorkflowAbort = NewNamespaceBoolSetting(
+		"history.enableUpdateWithStartRetryOnClosedWorkflowAbort",
+		true,
+		`EnableUpdateWithStartRetryOnClosedWorkflowAbort enables retrying Update-with-Start's update if it was aborted by a closing workflow.`,
+	)
+	EnableUpdateWithStartRetryableErrorOnClosedWorkflowAbort = NewNamespaceBoolSetting(
+		"history.enableUpdateWithStartRetryableErrorOnClosedWorkflowAbort",
+		true,
+		`EnableUpdateWithStartRetryableErrorOnClosedWorkflowAbort enables sending back a retryable status code when the Update-with-Start's update was aborted by a closing workflow.`,
+	)
 
 	ReplicatorTaskBatchSize = NewGlobalIntSetting(
 		"history.replicatorTaskBatchSize",
@@ -2411,6 +2406,16 @@ that task will be sent to DLQ.`,
 		time.Hour,
 		`ReplicationProgressCacheTTL is TTL of replication progress cache`,
 	)
+	ReplicationStreamSendEmptyTaskDuration = NewGlobalDurationSetting(
+		"history.ReplicationStreamSendEmptyTaskDuration",
+		time.Minute,
+		`ReplicationStreamSendEmptyTaskDuration is the interval to sync status when there is no replication task`,
+	)
+	ReplicationEnableRateLimit = NewGlobalBoolSetting(
+		"history.ReplicationEnableRateLimit",
+		true,
+		`ReplicationEnableRateLimit is the feature flag to enable replication global rate limiter`,
+	)
 	WorkflowIdReuseMinimalInterval = NewNamespaceDurationSetting(
 		"history.workflowIdReuseMinimalInterval",
 		1*time.Second,
@@ -2704,12 +2709,6 @@ WorkerActivitiesPerSecond, MaxConcurrentActivityTaskPollers.
 		`When set to true, logs all RPC/request errors for the namespace, not just unexpected ones.`,
 	)
 
-	ActivityAPIsEnabled = NewNamespaceBoolSetting(
-		"frontend.activityAPIsEnabled",
-		false,
-		`ActivityAPIsEnabled is a "feature enable" flag. `,
-	)
-
 	WorkflowRulesAPIsEnabled = NewNamespaceBoolSetting(
 		"frontend.workflowRulesAPIsEnabled",
 		false,
@@ -2726,5 +2725,17 @@ WorkerActivitiesPerSecond, MaxConcurrentActivityTaskPollers.
 		"rpc.slowRequestLoggingThreshold",
 		5*time.Second,
 		`SlowRequestLoggingThreshold is the threshold above which a gRPC request is considered slow and logged.`,
+	)
+
+	WorkerHeartbeatsEnabled = NewNamespaceBoolSetting(
+		"frontend.WorkerHeartbeatsEnabled",
+		false,
+		`WorkerHeartbeatsEnabled is a "feature enable" flag. It allows workers to send periodic heartbeats to the server.`,
+	)
+
+	ListWorkersEnabled = NewNamespaceBoolSetting(
+		"frontend.ListWorkersEnabled",
+		false,
+		`ListWorkersEnabled is a "feature enable" flag. It allows clients to get workers heartbeat information.`,
 	)
 )
