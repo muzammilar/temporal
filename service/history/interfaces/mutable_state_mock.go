@@ -2757,6 +2757,20 @@ func (mr *MockMutableStateMockRecorder) HasPendingWorkflowTask() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasPendingWorkflowTask", reflect.TypeOf((*MockMutableState)(nil).HasPendingWorkflowTask))
 }
 
+// HasRequestID mocks base method.
+func (m *MockMutableState) HasRequestID(requestID string) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasRequestID", requestID)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// HasRequestID indicates an expected call of HasRequestID.
+func (mr *MockMutableStateMockRecorder) HasRequestID(requestID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasRequestID", reflect.TypeOf((*MockMutableState)(nil).HasRequestID), requestID)
+}
+
 // HasStartedWorkflowTask mocks base method.
 func (m *MockMutableState) HasStartedWorkflowTask() bool {
 	m.ctrl.T.Helper()
@@ -3206,6 +3220,18 @@ func (m *MockMutableState) SetStickyTaskQueue(name string, scheduleToStartTimeou
 func (mr *MockMutableStateMockRecorder) SetStickyTaskQueue(name, scheduleToStartTimeout any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetStickyTaskQueue", reflect.TypeOf((*MockMutableState)(nil).SetStickyTaskQueue), name, scheduleToStartTimeout)
+}
+
+// SetSuccessorRunID mocks base method.
+func (m *MockMutableState) SetSuccessorRunID(runID string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetSuccessorRunID", runID)
+}
+
+// SetSuccessorRunID indicates an expected call of SetSuccessorRunID.
+func (mr *MockMutableStateMockRecorder) SetSuccessorRunID(runID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSuccessorRunID", reflect.TypeOf((*MockMutableState)(nil).SetSuccessorRunID), runID)
 }
 
 // SetUpdateCondition mocks base method.

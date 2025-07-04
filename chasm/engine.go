@@ -7,40 +7,40 @@ import (
 )
 
 type Engine interface {
-	newEntity(
+	NewEntity(
 		context.Context,
 		ComponentRef,
 		func(MutableContext) (Component, error),
 		...TransitionOption,
-	) (ComponentRef, error)
-	updateWithNewEntity(
+	) (EntityKey, []byte, error)
+	UpdateWithNewEntity(
 		context.Context,
 		ComponentRef,
 		func(MutableContext) (Component, error),
 		func(MutableContext, Component) error,
 		...TransitionOption,
-	) (ComponentRef, error)
+	) (EntityKey, []byte, error)
 
-	updateComponent(
+	UpdateComponent(
 		context.Context,
 		ComponentRef,
 		func(MutableContext, Component) error,
 		...TransitionOption,
-	) (ComponentRef, error)
-	readComponent(
+	) ([]byte, error)
+	ReadComponent(
 		context.Context,
 		ComponentRef,
 		func(Context, Component) error,
 		...TransitionOption,
 	) error
 
-	pollComponent(
+	PollComponent(
 		context.Context,
 		ComponentRef,
 		func(Context, Component) (any, bool, error),
 		func(MutableContext, Component, any) error,
 		...TransitionOption,
-	) (ComponentRef, error)
+	) ([]byte, error)
 }
 
 type BusinessIDReusePolicy int
@@ -115,9 +115,9 @@ func NewEntity[C Component, I any, O any](
 	newFn func(MutableContext, I) (C, O, error),
 	input I,
 	opts ...TransitionOption,
-) (O, []byte, error) {
+) (O, EntityKey, []byte, error) {
 	var output O
-	ref, err := engineFromContext(ctx).newEntity(
+	entityKey, serializedRef, err := engineFromContext(ctx).NewEntity(
 		ctx,
 		NewComponentRef[C](key),
 		func(ctx MutableContext) (Component, error) {
@@ -129,10 +129,9 @@ func NewEntity[C Component, I any, O any](
 		opts...,
 	)
 	if err != nil {
-		return output, nil, err
+		return output, EntityKey{}, nil, err
 	}
-	serializedRef, err := ref.serialize()
-	return output, serializedRef, err
+	return output, entityKey, serializedRef, err
 }
 
 func UpdateWithNewEntity[C Component, I any, O1 any, O2 any](
@@ -142,10 +141,10 @@ func UpdateWithNewEntity[C Component, I any, O1 any, O2 any](
 	updateFn func(C, MutableContext, I) (O2, error),
 	input I,
 	opts ...TransitionOption,
-) (O1, O2, []byte, error) {
+) (O1, O2, EntityKey, []byte, error) {
 	var output1 O1
 	var output2 O2
-	ref, err := engineFromContext(ctx).updateWithNewEntity(
+	entityKey, serializedRef, err := engineFromContext(ctx).UpdateWithNewEntity(
 		ctx,
 		NewComponentRef[C](key),
 		func(ctx MutableContext) (Component, error) {
@@ -162,10 +161,9 @@ func UpdateWithNewEntity[C Component, I any, O1 any, O2 any](
 		opts...,
 	)
 	if err != nil {
-		return output1, output2, nil, err
+		return output1, output2, EntityKey{}, nil, err
 	}
-	serializedRef, err := ref.serialize()
-	return output1, output2, serializedRef, err
+	return output1, output2, entityKey, serializedRef, err
 }
 
 // TODO:
@@ -187,7 +185,7 @@ func UpdateComponent[C Component, R []byte | ComponentRef, I any, O any](
 		return output, nil, err
 	}
 
-	newRef, err := engineFromContext(ctx).updateComponent(
+	newSerializedRef, err := engineFromContext(ctx).UpdateComponent(
 		ctx,
 		ref,
 		func(ctx MutableContext, c Component) error {
@@ -201,8 +199,7 @@ func UpdateComponent[C Component, R []byte | ComponentRef, I any, O any](
 	if err != nil {
 		return output, nil, err
 	}
-	serializedRef, err := newRef.serialize()
-	return output, serializedRef, err
+	return output, newSerializedRef, err
 }
 
 func ReadComponent[C Component, R []byte | ComponentRef, I any, O any](
@@ -219,7 +216,7 @@ func ReadComponent[C Component, R []byte | ComponentRef, I any, O any](
 		return output, err
 	}
 
-	err = engineFromContext(ctx).readComponent(
+	err = engineFromContext(ctx).ReadComponent(
 		ctx,
 		ref,
 		func(ctx Context, c Component) error {
@@ -254,7 +251,7 @@ func PollComponent[C Component, R []byte | ComponentRef, I any, O any, T any](
 		return output, nil, err
 	}
 
-	newRef, err := engineFromContext(ctx).pollComponent(
+	newSerializedRef, err := engineFromContext(ctx).PollComponent(
 		ctx,
 		ref,
 		func(ctx Context, c Component) (any, bool, error) {
@@ -270,15 +267,14 @@ func PollComponent[C Component, R []byte | ComponentRef, I any, O any, T any](
 	if err != nil {
 		return output, nil, err
 	}
-	serializedRef, err := newRef.serialize()
-	return output, serializedRef, err
+	return output, newSerializedRef, err
 }
 
 func convertComponentRef[R []byte | ComponentRef](
 	r R,
 ) (ComponentRef, error) {
 	if refToken, ok := any(r).([]byte); ok {
-		return deserializeComponentRef(refToken)
+		return DeserializeComponentRef(refToken)
 	}
 
 	//revive:disable-next-line:unchecked-type-assertion

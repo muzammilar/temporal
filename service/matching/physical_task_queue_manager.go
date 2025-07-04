@@ -110,6 +110,7 @@ var (
 	errRemoteSyncMatchFailed     = serviceerror.NewCanceled("remote sync match failed")
 	errMissingNormalQueueName    = errors.New("missing normal queue name")
 	errDeploymentVersionNotReady = serviceerror.NewUnavailable("task queue is not ready to process polls from this deployment version, try again shortly")
+	ErrBlackholedQuery           = "You are trying to query a closed Workflow that is PINNED to Worker Deployment Version %s, but %s is drained and has no pollers to answer the query. Immediately: You can re-deploy Workers in this Deployment Version to take those queries, or you can workflow update-options to change your workflow to AUTO_UPGRADE. For the future: In your infrastructure, consider waiting longer after the last queried timestamp as reported in Describe Deployment before you sunset Workers. Or mark this workflow as AUTO_UPGRADE."
 )
 
 func newPhysicalTaskQueueManager(
@@ -167,6 +168,9 @@ func newPhysicalTaskQueueManager(
 		pqMgr.partitionMgr.engine.historyClient,
 	)
 
+	isSticky := queue.Partition().Kind() == enumspb.TASK_QUEUE_KIND_STICKY
+	isChild := !isSticky && !queue.Partition().IsRoot()
+
 	newMatcher, cancelSub := config.NewMatcher(func(bool) {
 		// unload on change to NewMatcher so that we can reload with the new setting:
 		pqMgr.UnloadFromPartitionManager(unloadCauseConfigChange)
@@ -186,7 +190,7 @@ func newPhysicalTaskQueueManager(
 		)
 		var fwdr *priForwarder
 		var err error
-		if !queue.Partition().IsRoot() && queue.Partition().Kind() != enumspb.TASK_QUEUE_KIND_STICKY {
+		if isChild {
 			// Every DB Queue needs its own forwarder so that the throttles do not interfere
 			fwdr, err = newPriForwarder(&config.forwarderConfig, queue, e.matchingRawClient)
 			if err != nil {
@@ -216,7 +220,7 @@ func newPhysicalTaskQueueManager(
 		)
 		var fwdr *Forwarder
 		var err error
-		if !queue.Partition().IsRoot() && queue.Partition().Kind() != enumspb.TASK_QUEUE_KIND_STICKY {
+		if isChild {
 			// Every DB Queue needs its own forwarder so that the throttles do not interfere
 			fwdr, err = newForwarder(&config.forwarderConfig, queue, e.matchingRawClient)
 			if err != nil {
